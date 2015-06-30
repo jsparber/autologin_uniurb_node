@@ -20,6 +20,8 @@ var request = require("request");
 var HTMLParser = require('fast-html-parser');
 var config = require('./config');
 var simbole = 0;
+var TESTURL = "http://raw.githubusercontent.com/jsparber/autologin_uniurb_node/master/isonline"
+var logoffUrl = "http://172.23.198.1:3990/logoff";
 
 setInterval(function() {
   doLogin(simbole % 4);
@@ -28,10 +30,11 @@ setInterval(function() {
 
 function doLogin(i) {
   //get AP ip adress, to get the challange
-  request("http://sparber.net", function (err, res) {
-    var body = HTMLParser.parse(res.body);
-    if(!res.body.match(/sparber.net/gi)) {
+  request(TESTURL, function (err, res) {
+    if(!err && !res.body.match(/true/gi)) {
+      var body = HTMLParser.parse(res.body);
       var apUrl = body.querySelector('a').attributes.href;
+      logoffUrl = apUrl.replace(/prelogin/gi, "logoff");
       request(apUrl, function (err, res) {
         var body = HTMLParser.parse(res.body);
         var chal = body.querySelector('INPUT').attributes.VALUE;
@@ -45,15 +48,19 @@ function doLogin(i) {
           "&Password=" + config.password +
           "&form_id=69889&login=login";
         request(url, function (err, res) {
-          var body = HTMLParser.parse(res.body);
-          var url = body.querySelectorAll('meta')[3].attributes.content.split("url=")[1];
-          request(url, function (err, res) {
-            if(!res.body.match(/Logout/gi))
-              console.log("Error: not connected!");
-            else
-              console.log("Success: connected!");
+          if(!err) {
+            var body = HTMLParser.parse(res.body);
+            var url = body.querySelectorAll('meta')[3].attributes.content.split("url=")[1];
+            request(url, function (err, res) {
+              if(!err) {
+                if(!res.body.match(/Logout/gi))
+                  console.log("Error: not connected!");
+                else
+                  console.log("Success: connected!");
+              }
 
-          });
+            });
+          }
         });
       });
     }
@@ -77,3 +84,10 @@ function doLogin(i) {
   });
 
 }
+
+process.on('SIGINT', function() {
+  console.log("Logoff!");
+  request(logoffUrl, function (err, res) {
+    process.exit(0);
+  });
+});
