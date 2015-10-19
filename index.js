@@ -16,24 +16,63 @@
 #	Foundation, 51 Franklin Street - Fifth Floor, Boston,
 #	MA 02110-1301, USA.  */
 
-var request = require("request");
-var config = require('./config');
 var simbole = 0;
 var TESTURL = "http://raw.githubusercontent.com/jsparber/autologin_uniurb_node/master/isonline"
 var logoffUrl = "http://logout.uniurb.it"
+var request = require("request");
+var config = {};
+try {
+  config = require('./config');
+  doLogin(simbole % 4);
+} catch (e) {
+  console.log("Create config:");
+  var fs = require('fs');
+  var readline = require('readline');
+
+  var rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  rl.question("What is your username (with realm)? ", function(username) {
+    config.username = username.split("@")[0];
+    config.realm = "@" + username.split("@")[1];
+    rl.question("What is your password? ", function(password) {
+      config.password = password;
+      console.log(config);
+      rl.question("Do you want to save this credentials? [Y/n] ", function(answer) {
+        if (answer == "Y" || answer == "y" || answer == "") {
+          console.log("The credentials will be saved!");
+          fs.open('./config', 'w', function (err, fd) {
+            if (err)
+              throw err;
+            fs.write(fd, "module.exports =" + JSON.stringify(config), function (err) {
+              if (err)
+                throw err;
+              fs.close(fd, function (err) {
+                if (err)
+                  throw err;
+              });
+            });
+          });
+        }
+        else
+          console.log("The credentials won't be saved!");
+
+        rl.close();
+        doLogin(simbole % 4);
+      });
+    });
+  });
+}
 
 //curl 'http://172.25.0.1:8002/' -H 'Host: 172.25.0.1:8002' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:41.0) Gecko/20100101 Firefox/41.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H 'Accept-Language: en,it;q=0.8,de;q=0.5,en-US;q=0.3' --compressed -H 'DNT: 1' -H 'Connection: keep-alive' --data 'user=j.sparber&auth_pass=sdfsdfdsf&Realm=stud&auth_user=j.sparber%40stud&redirurl=http%3A%2F%2Fsparber.net%2F&accept=LOGIN'
 
-console.log("Do login...");
-doLogin(simbole % 4);
-setInterval(function() {
-  doLogin(simbole % 4);
-  simbole++;
-}, 5000);
 
 function doLogin(i) {
   request.get(TESTURL, function (err, res) {
     if(!err && !res.body.match(/true/gi)) {
+      console.log("Do login...");
       var portalAction = res.body.split("portal_action=")[1].split("&")[0];
       var formData = {
         user : config.username,
@@ -49,10 +88,13 @@ function doLogin(i) {
           if(res.statusCode == 200) {
             var msg = res.body.split("message=")[1].split('"')[0];
             console.log("Error: " + msg);
+            console.log("Try to remove the config file.");
           }
-          else
+          else {
             console.log("Successful login!");
             console.log("Will keep you logged in...");
+            doLogin(simbole % 4);
+          }
         }
 
       });
@@ -72,6 +114,10 @@ function doLogin(i) {
           process.stdout.write("|\r");
           break;
       }
+      setTimeout(function() {
+        doLogin(simbole % 4);
+        simbole++;
+      }, 5000);
     }
   });
 
