@@ -17,51 +17,42 @@
 #	MA 02110-1301, USA.  */
 
 var request = require("request");
-var HTMLParser = require('fast-html-parser');
 var config = require('./config');
 var simbole = 0;
 var TESTURL = "http://raw.githubusercontent.com/jsparber/autologin_uniurb_node/master/isonline"
-var logoffUrl = "http://172.23.198.1:3990/logoff";
+var logoffUrl = "http://logout.uniurb.it"
 
+//curl 'http://172.25.0.1:8002/' -H 'Host: 172.25.0.1:8002' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:41.0) Gecko/20100101 Firefox/41.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H 'Accept-Language: en,it;q=0.8,de;q=0.5,en-US;q=0.3' --compressed -H 'DNT: 1' -H 'Connection: keep-alive' --data 'user=j.sparber&auth_pass=sdfsdfdsf&Realm=stud&auth_user=j.sparber%40stud&redirurl=http%3A%2F%2Fsparber.net%2F&accept=LOGIN'
+
+doLogin(simbole % 4);
 setInterval(function() {
   doLogin(simbole % 4);
   simbole++;
-}, 500);
+}, 5000);
 
 function doLogin(i) {
-  //get AP ip adress, to get the challange
-  request(TESTURL, function (err, res) {
+  request.get(TESTURL, function (err, res) {
     if(!err && !res.body.match(/true/gi)) {
-      var body = HTMLParser.parse(res.body);
-      var apUrl = body.querySelector('a').attributes.href;
-      logoffUrl = apUrl.replace(/prelogin/gi, "logoff");
-      request(apUrl, function (err, res) {
-        var body = HTMLParser.parse(res.body);
-        var chal = body.querySelector('INPUT').attributes.VALUE;
-        var apIP = apUrl.split("/")[2].split(":")[0];
-        url="https://radius.uniurb.it/URB/test.php?" +
-          "chal=" + chal +
-          "&uamip=" + apIP + 
-          "&uamport=3990&userurl=&" +
-          "UserName=" + config.username +
-          "&Realm=" + config.realm + 
-          "&Password=" + config.password +
-          "&form_id=69889&login=login";
-        request(url, function (err, res) {
-          if(!err) {
-            var body = HTMLParser.parse(res.body);
-            var url = body.querySelectorAll('meta')[3].attributes.content.split("url=")[1];
-            request(url, function (err, res) {
-              if(!err) {
-                if(!res.body.match(/Logout/gi))
-                  console.log("Error: not connected!");
-                else
-                  console.log("Success: connected!");
-              }
-
-            });
+      var portalAction = res.body.split("portal_action=")[1].split("&")[0];
+      var formData = {
+        user : config.username,
+        auth_pass : config.password,
+        Realm : config.realm.slice(1),
+        auth_user : config.username + config.realm,
+        redirurl : TESTURL,
+        accept : "LOGIN"
+      };
+      request.post({url: portalAction, form: formData}, function(err, res, body){ 
+        if(!err) {
+          //console.log(res.statusCode);
+          if(res.statusCode == 200) {
+            var msg = res.body.split("message=")[1].split('"')[0];
+            console.log("Error: " + msg);
           }
-        });
+          else
+            console.log("Successfull login!");
+        }
+
       });
     }
     else {
@@ -80,7 +71,6 @@ function doLogin(i) {
           break;
       }
     }
-    ///  console.log("Already connected!");
   });
 
 }
