@@ -77,7 +77,6 @@ function doLogin(i) {
         var portalAction = res.body.split("portal_action=")[1].split("&")[0];
       }
       else {
-        console.log(res.headers.location);
         var portalAction = res.headers.location;
       }
 
@@ -92,7 +91,6 @@ function doLogin(i) {
       request.post({url: portalAction, form: formData}, function(err, res, body){ 
         if(!err) {
           //console.log(res.statusCode);
-          console.log(res.body);
           if(res.statusCode == 200 && res.body.match(/Click the button below to disconnect/gi) == null) {
             try {
               var msg = res.body.split("message=")[1].split('"')[0];
@@ -105,6 +103,10 @@ function doLogin(i) {
           else {
             console.log("Successful login!");
             console.log("Will keep you logged in...");
+            if(res.body.match(/Click the button below to disconnect/gi) != null) {
+              var logout_id = res.body.split('value="')[1].split('"')[0];
+              config.logout =  {logoutUrl: portalAction, logout_id : logout_id, zone : "sadwifi", logout : "Logout"};
+            }
             doLogin(simbole % 4);
           }
         }
@@ -135,10 +137,22 @@ function doLogin(i) {
 
 }
 
+
 process.on('SIGINT', function() {
   console.log("Do logout...");
-  request(logoffUrl, function (err, res) {
-    console.log("Succesful logout!");
-    process.exit(0);
-  });
+  if (config.logout) {
+    request.post({url: config.logout.logoutUrl, form: config.logout}, function(err, res, body){ 
+      if(!err && res.body.match(/You have been disconnected./gi) != null)
+        console.log("Succesful logout!");
+      if (err)
+        throw err;
+      process.exit(0);
+    });
+  }
+  else {
+    request(logoffUrl, function (err, res) {
+      console.log("Succesful logout!");
+      process.exit(0);
+    });
+  }
 });
