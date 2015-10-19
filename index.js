@@ -17,7 +17,7 @@
 #	MA 02110-1301, USA.  */
 
 var simbole = 0;
-var TESTURL = "http://raw.githubusercontent.com/jsparber/autologin_uniurb_node/master/isonline"
+var TESTURL = "http://juliansparber.com/autologin_uniurb_node/isonline"
 var logoffUrl = "http://logout.uniurb.it"
 var request = require("request");
 var config = {};
@@ -70,10 +70,17 @@ try {
 
 
 function doLogin(i) {
-  request.get(TESTURL, function (err, res) {
-    if(!err && !res.body.match(/true/gi)) {
+  request.get({url : TESTURL, followRedirect : false}, function (err, res) {
+    if(!err && res.body != "true\n") {
       console.log("Do login...");
-      var portalAction = res.body.split("portal_action=")[1].split("&")[0];
+      if(res.statusCode == 200) {
+        var portalAction = res.body.split("portal_action=")[1].split("&")[0];
+      }
+      else {
+        console.log(res.headers.location);
+        var portalAction = res.headers.location;
+      }
+
       var formData = {
         user : config.username,
         auth_pass : config.password,
@@ -85,10 +92,15 @@ function doLogin(i) {
       request.post({url: portalAction, form: formData}, function(err, res, body){ 
         if(!err) {
           //console.log(res.statusCode);
-          if(res.statusCode == 200) {
-            var msg = res.body.split("message=")[1].split('"')[0];
-            console.log("Error: " + msg);
-            console.log("Try to remove the config file.");
+          console.log(res.body);
+          if(res.statusCode == 200 && res.body.match(/Click the button below to disconnect/gi) == null) {
+            try {
+              var msg = res.body.split("message=")[1].split('"')[0];
+              console.log("Error: " + msg);
+              console.log("Try to remove the config file.");
+            }
+            catch (e) {
+            }
           }
           else {
             console.log("Successful login!");
