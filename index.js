@@ -24,6 +24,7 @@ var logoffUrl = "http://logout.uniurb.it"
 
 //curl 'http://172.25.0.1:8002/' -H 'Host: 172.25.0.1:8002' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:41.0) Gecko/20100101 Firefox/41.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H 'Accept-Language: en,it;q=0.8,de;q=0.5,en-US;q=0.3' --compressed -H 'DNT: 1' -H 'Connection: keep-alive' --data 'user=j.sparber&auth_pass=sdfsdfdsf&Realm=stud&auth_user=j.sparber%40stud&redirurl=http%3A%2F%2Fsparber.net%2F&accept=LOGIN'
 
+console.log("Do login...");
 doLogin(simbole % 4);
 setInterval(function() {
   doLogin(simbole % 4);
@@ -50,7 +51,8 @@ function doLogin(i) {
             console.log("Error: " + msg);
           }
           else
-            console.log("Successfull login!");
+            console.log("Successful login!");
+            console.log("Will keep you logged in...");
         }
 
       });
@@ -76,8 +78,9 @@ function doLogin(i) {
 }
 
 process.on('SIGINT', function() {
-  console.log("Logoff!");
+  console.log("Do logout...");
   request(logoffUrl, function (err, res) {
+    console.log("Succesful logout!");
     process.exit(0);
   });
 });
