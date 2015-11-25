@@ -76,42 +76,79 @@ function doLogin(i) {
       if(res.statusCode == 200) {
         var portalAction = res.body.split("portal_action=")[1].split("&")[0];
       }
+      else if (res.headers.location.match(/challenge/gi) !== null) {
+        //is stilab or cable network
+        //var portalAction = res.headers.location;
+        var location = res.headers.location.split("%3f")[1]; //split("%26");
+        var apConfig = {};
+        apConfig.chal = location.split("challenge%3d")[1].split("%26")[0];
+        apConfig.uamip = location.split("uamip%3d")[1].split("%26")[0];
+        apConfig.uamport = location.split("uamport%3d")[1].split("%26")[0];
+        console.log("Network is stilab");
+        var getAction = "https://radius.uniurb.it/URB/test.php?" +
+          "chal=" + apConfig.chal +
+          "&uamip=" + apConfig.uamip + 
+          "&uamport=" + apConfig.uamport + 
+          "&userurl=&" +
+          "UserName=" + config.username +
+          "&Realm=" + config.realm.slice(1) + 
+          "&Password=" + config.password +
+          "&form_id=69889&login=login";
+      }
       else {
         var portalAction = res.headers.location;
       }
 
-      var formData = {
-        user : config.username,
-        auth_pass : config.password,
-        Realm : config.realm.slice(1),
-        auth_user : config.username + config.realm,
-        redirurl : TESTURL,
-        accept : "LOGIN"
-      };
-      request.post({url: portalAction, form: formData}, function(err, res, body){ 
-        if(!err) {
-          //console.log(res.statusCode);
-          if(res.statusCode == 200 && res.body.match(/Click the button below to disconnect/gi) == null) {
-            try {
-              var msg = res.body.split("message=")[1].split('"')[0];
-              console.log("Error: " + msg);
-              console.log("Try to remove the config file.");
+      if (getAction === undefined) {
+        var formData = {
+          user : config.username,
+          auth_pass : config.password,
+          Realm : config.realm.slice(1),
+          auth_user : config.username + config.realm,
+          redirurl : TESTURL,
+          accept : "LOGIN"
+        };
+        request.post({url: portalAction, form: formData}, function(err, res, body){ 
+          if(!err) {
+            //console.log(res.statusCode);
+            if(res.statusCode == 200 && res.body.match(/Click the button below to disconnect/gi) == null) {
+              try {
+                var msg = res.body.split("message=")[1].split('"')[0];
+                console.log("Error: " + msg);
+                console.log("Try to remove the config file.");
+              }
+              catch (e) {
+              }
             }
-            catch (e) {
+            else {
+              console.log("Successful login!");
+              console.log("Will keep you logged in...");
+              if(res.body.match(/Click the button below to disconnect/gi) != null) {
+                var logout_id = res.body.split('value="')[1].split('"')[0];
+                config.logout =  {logoutUrl: portalAction, logout_id : logout_id, zone : "sadwifi", logout : "Logout"};
+              }
+              doLogin(simbole % 4);
             }
           }
-          else {
-            console.log("Successful login!");
-            console.log("Will keep you logged in...");
-            if(res.body.match(/Click the button below to disconnect/gi) != null) {
-              var logout_id = res.body.split('value="')[1].split('"')[0];
-              config.logout =  {logoutUrl: portalAction, logout_id : logout_id, zone : "sadwifi", logout : "Logout"};
-            }
-            doLogin(simbole % 4);
-          }
-        }
 
-      });
+        });
+      }
+      else {
+        console.log("Do stialb login");
+        request(getAction, function (err, res) {
+          if(!err) {
+            var url = res.body.split('url=')[1].split('">')[0];
+            request(url, function (err, res) {
+              if(!err) {
+                if(!res.body.match(/Logout/gi))
+                  console.log("Error: not connected!");
+                else
+                  console.log("Success: connected!");
+              }
+            });
+          }
+        });
+      }
     }
     else {
       switch (i) {
@@ -128,11 +165,11 @@ function doLogin(i) {
           process.stdout.write("|\r");
           break;
       }
+    }
       setTimeout(function() {
         doLogin(simbole % 4);
         simbole++;
-      }, 5000);
-    }
+      }, 500);
   });
 
 }
