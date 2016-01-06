@@ -34,10 +34,10 @@ try {
     output: process.stdout
   });
 
-  rl.question("What is your username (with realm)? ", function(username) {
+  rl.question("What's your username (with @realm)? ", function(username) {
     config.username = username.split("@")[0];
     config.realm = "@" + username.split("@")[1];
-    rl.question("What is your password? ", function(password) {
+    rl.question("What's your password? ", function(password) {
       config.password = password;
       console.log(config);
       rl.question("Do you want to save this credentials? [Y/n] ", function(answer) {
@@ -134,7 +134,7 @@ function doLogin(i) {
         });
       }
       else {
-        console.log("Do stialb login");
+        console.log("Do stilab login");
         request(getAction, function (err, res) {
           if(!err) {
             var url = res.body.split('url=')[1].split('">')[0];
