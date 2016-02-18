@@ -1,8 +1,10 @@
-# autologin_uniurb_node
+## Prerequisites
+    Nodejs
+    npm
 
-##How to use
-###Linux
-Download this [zip](https://github.com/jsparber/autologin_uniurb_node/archive/master.zip) and run 
-```
+## How To Install
+### Linux
+    git clone https://github.com/jsparber/autologin_uniurb_node.git
+    cd autologin_uniurb_node
+    npm install
     node index.js
-```
